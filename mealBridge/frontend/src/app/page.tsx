@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { evaluateUrgency } from '@/lib/urgency';
+import { formatTime } from '@/lib/format';
 import { StatCard } from '@/components/ui/StatCard';
 import { DonationCard } from '@/components/donations/DonationCard';
 import { CreateDonationModal } from '@/components/donations/CreateDonationModal';
+
 import {
   UtensilsCrossed,
   Hourglass,
@@ -22,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export function OverviewPage() {
-  const { stats, donations, activities, urgentDonations } = useDemoStore();
+  const { stats, donations, activities, urgentDonations, currentTime } = useMealBridgeStore();
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // Active available donations for overview list
@@ -33,14 +35,7 @@ export function OverviewPage() {
   // Recent activity stream (latest 5)
   const recentActivities = activities.slice(0, 5);
 
-  const formatActivityTime = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return '';
-    }
-  };
+  const formatActivityTime = formatTime;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -49,7 +44,7 @@ export function OverviewPage() {
         <div className="relative z-10 max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-800/80 text-emerald-200 text-xs font-semibold border border-emerald-700/60">
             <Zap className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Hyderabad Campus Food Rescue Cluster</span>
+            <span>Hyderabad Food Rescue Cluster</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
             Coordinating Surplus Food Pickups &amp; NGO Logistics
@@ -64,13 +59,13 @@ export function OverviewPage() {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white text-emerald-950 hover:bg-emerald-50 transition-colors shadow-2xs"
             >
               <Plus className="w-4 h-4 text-emerald-800" />
-              <span>Create Surplus Donation</span>
+              <span>Add Food</span>
             </button>
             <Link
               href="/queue"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-800/80 hover:bg-emerald-700 text-white border border-emerald-700/80 transition-colors"
             >
-              <span>View Rescue Queue</span>
+              <span>View Urgent Food</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -151,7 +146,7 @@ export function OverviewPage() {
                 className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-800 text-white"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Create Donation</span>
+                <span>Add Food</span>
               </button>
             </div>
           )}
@@ -194,7 +189,7 @@ export function OverviewPage() {
                   </div>
                 </div>
                 <span className="font-mono font-bold text-emerald-900 text-base">
-                  {donations.filter((d) => d.status === 'available' && evaluateUrgency(d).level === 'normal').length}
+                  {donations.filter((d) => d.status === 'available' && evaluateUrgency(d, currentTime).level === 'normal').length}
                 </span>
               </div>
             </div>

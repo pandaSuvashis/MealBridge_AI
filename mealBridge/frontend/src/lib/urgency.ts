@@ -1,10 +1,7 @@
-import { Donation, UrgencyEvaluation, UrgencyLevel } from '@/types';
-
-// Deterministic reference time for SSR prerendering
-const PRERENDER_REFERENCE_TIME = new Date('2026-10-10T13:00:00.000Z').getTime();
+import { Donation, UrgencyEvaluation } from '@/types';
 
 /**
- * Transparent demo urgency evaluation function.
+ * Evaluate urgency against the current clock unless a render-safe time is supplied.
  * Evaluates food donations based on perishable nature, preparation time,
  * and minutes remaining until pickup deadline.
  */
@@ -13,17 +10,17 @@ export function evaluateUrgency(
   currentTime?: Date | number
 ): UrgencyEvaluation {
   const deadline = new Date(donation.pickupDeadline).getTime();
-  const now = currentTime
-    ? typeof currentTime === 'number'
+  const now = currentTime === undefined
+    ? Date.now()
+    : typeof currentTime === 'number'
       ? currentTime
-      : currentTime.getTime()
-    : PRERENDER_REFERENCE_TIME;
+      : currentTime.getTime();
 
   const diffMs = deadline - now;
-  const remainingMinutes = Math.round(diffMs / (1000 * 60));
+  const remainingMinutes = Math.ceil(diffMs / (1000 * 60));
 
-  if (remainingMinutes <= 0 || donation.status === 'expired') {
-    const expiredMinutesAgo = Math.abs(remainingMinutes);
+  if (diffMs <= 0 || donation.status === 'expired') {
+    const expiredMinutesAgo = Math.floor(Math.abs(diffMs) / (1000 * 60));
     const timeAgoStr =
       expiredMinutesAgo < 60
         ? `${expiredMinutesAgo} min ago`

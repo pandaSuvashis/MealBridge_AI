@@ -2,13 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { evaluateUrgency } from '@/lib/urgency';
 import { Bell, AlertTriangle, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const { urgentDonations, donations } = useDemoStore();
+  const { urgentDonations, currentTime } = useMealBridgeStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -29,7 +29,7 @@ export function NotificationDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-        aria-label="View notifications"
+        aria-label="Show notifications"
       >
         <Bell className="w-5 h-5" />
         {urgentCount > 0 && (
@@ -60,7 +60,7 @@ export function NotificationDropdown() {
           <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
             {urgentDonations.length > 0 ? (
               urgentDonations.map((donation) => {
-                const urgency = evaluateUrgency(donation);
+                const urgency = evaluateUrgency(donation, currentTime);
                 return (
                   <div
                     key={donation.id}

@@ -158,14 +158,14 @@ export function RecipientCard({
         {isAssigned ? (
           <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Currently Assigned</span>
+            <span>Receiver Selected</span>
           </span>
         ) : isAvailable ? (
           <button
             onClick={() => onAssign(recipient.id)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs"
           >
-            <span>Assign & Claim</span>
+            <span>Choose This Receiver</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         ) : (

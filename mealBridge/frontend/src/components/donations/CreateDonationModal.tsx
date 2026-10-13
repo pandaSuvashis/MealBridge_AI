@@ -1,9 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useDemoStore } from '@/lib/demo-store';
+import React, { useState } from 'react';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { FoodCategory } from '@/types';
 import { Plus, X, CheckCircle, AlertCircle, Utensils } from 'lucide-react';
+
+const toLocalDateTime = (date: Date) => {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+function normalizeIndianPhone(value: string) {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  if (/^\+91\d{10}$/.test(trimmed)) return `+${digits}`;
+  if (/^91\d{10}$/.test(digits)) return `+${digits}`;
+  if (/^\d{10}$/.test(digits)) return `+91${digits}`;
+  return null;
+}
 
 interface CreateDonationModalProps {
   isOpen: boolean;
@@ -16,53 +30,43 @@ export function CreateDonationModal({
   onClose,
   onSuccess,
 }: CreateDonationModalProps) {
-  const { createDonation, currentRole } = useDemoStore();
+  if (!isOpen) return null;
+  return <DonationForm onClose={onClose} onSuccess={onSuccess} />;
+}
+
+function DonationForm({
+  onClose,
+  onSuccess,
+}: Pick<CreateDonationModalProps, 'onClose' | 'onSuccess'>) {
+  const { createDonation } = useMealBridgeStore();
 
   const [foodName, setFoodName] = useState('');
   const [category, setCategory] = useState<FoodCategory>('Prepared Meals');
   const [quantityKg, setQuantityKg] = useState('');
-  const [donorName, setDonorName] = useState(
-    currentRole.roleType === 'Donor' ? currentRole.organization : 'IIIT Bakul Central Mess'
-  );
+  const [donorName, setDonorName] = useState('');
+  const [donorPhone, setDonorPhone] = useState('');
   const [donorType, setDonorType] = useState<
     'Campus Mess' | 'Cafeteria' | 'Bakery' | 'Tech Park Dining' | 'Event Hall'
   >('Campus Mess');
-  const [pickupLocation, setPickupLocation] = useState(
-    'Ground Floor Dispatch Dock, Bakul Nivas, IIIT Hyderabad Campus'
+  const [pickupLocation, setPickupLocation] = useState('');
+  const [locationArea, setLocationArea] = useState('');
+  const [preparationTime, setPreparationTime] = useState(() =>
+    toLocalDateTime(new Date(Date.now() - 30 * 60 * 1000))
   );
-  const [locationArea, setLocationArea] = useState('IIIT Campus');
-  const [preparationTime, setPreparationTime] = useState('');
-  const [pickupDeadline, setPickupDeadline] = useState('');
+  const [pickupDeadline, setPickupDeadline] = useState(() =>
+    toLocalDateTime(new Date(Date.now() + 120 * 60 * 1000))
+  );
   const [foodNotes, setFoodNotes] = useState('');
 
   // Errors state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Initialize dates in useEffect on modal open so prerendering isn't blocked
-  useEffect(() => {
-    if (isOpen) {
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      const toIsoLocal = (d: Date) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-          d.getHours()
-        )}:${pad(d.getMinutes())}`;
-
-      const prep = new Date(now.getTime() - 30 * 60 * 1000);
-      const deadline = new Date(now.getTime() + 120 * 60 * 1000);
-      setPreparationTime(toIsoLocal(prep));
-      setPickupDeadline(toIsoLocal(deadline));
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!foodName.trim()) {
-      newErrors.foodName = 'Food name or description is required';
+    if (foodName.trim().length < 2) {
+      newErrors.foodName = 'Food name must contain at least 2 characters';
     }
 
     const qty = parseFloat(quantityKg);
@@ -72,12 +76,17 @@ export function CreateDonationModal({
       newErrors.quantityKg = 'Quantity seems unusually large. Please enter ≤ 500 kg';
     }
 
-    if (!donorName.trim()) {
-      newErrors.donorName = 'Donor or organization name is required';
+    if (donorName.trim().length < 2) {
+      newErrors.donorName = 'Donor or organization name must contain at least 2 characters';
     }
 
-    if (!pickupLocation.trim()) {
-      newErrors.pickupLocation = 'Specific pickup address/dock is required';
+    const normalizedPhone = normalizeIndianPhone(donorPhone);
+    if (!normalizedPhone) {
+      newErrors.donorPhone = 'Enter a valid 10-digit Indian phone number or include the country code.';
+    }
+
+    if (pickupLocation.trim().length < 3) {
+      newErrors.pickupLocation = 'Specific pickup address/dock must contain at least 3 characters';
     }
 
     if (!preparationTime) {
@@ -91,6 +100,8 @@ export function CreateDonationModal({
       const deadTs = new Date(pickupDeadline).getTime();
       if (deadTs <= prepTs) {
         newErrors.pickupDeadline = 'Pickup deadline must be later than preparation time';
+      } else if (deadTs <= Date.now()) {
+        newErrors.pickupDeadline = 'Pickup deadline must be in the future';
       }
     }
 
@@ -98,16 +109,19 @@ export function CreateDonationModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedDonorPhone = normalizeIndianPhone(donorPhone);
     if (!validate()) return;
+    if (!normalizedDonorPhone) return;
 
     try {
-      const created = createDonation({
+      const created = await createDonation({
         foodName: foodName.trim(),
         category,
         quantityKg: parseFloat(quantityKg),
         donorName: donorName.trim(),
+        donorPhone: normalizedDonorPhone,
         donorType,
         pickupLocation: pickupLocation.trim(),
         locationArea: locationArea.trim() || 'Hyderabad Campus',
@@ -126,8 +140,9 @@ export function CreateDonationModal({
         if (onSuccess) onSuccess(created.id);
       }, 1400);
     } catch (err) {
-      console.error(err);
-      setErrors({ form: 'An unexpected error occurred while saving the donation.' });
+      setErrors({
+        form: err instanceof Error ? err.message : 'An unexpected error occurred while saving the donation.',
+      });
     }
   };
 
@@ -142,7 +157,7 @@ export function CreateDonationModal({
             </div>
             <div>
               <h2 className="font-bold text-stone-900 text-base sm:text-lg">
-                Create Surplus Food Donation
+                Add Food Donation
               </h2>
               <p className="text-xs text-stone-500">
                 Register untouched surplus meals for nearby NGO or student volunteer rescue
@@ -278,6 +293,29 @@ export function CreateDonationModal({
             </div>
           </div>
 
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-stone-800" htmlFor="donor-phone">
+              Donor Phone Number <span className="text-rose-600">*</span>
+            </label>
+            <input
+              id="donor-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={donorPhone}
+              onChange={(e) => setDonorPhone(e.target.value)}
+              placeholder="e.g. 98765 43210"
+              aria-describedby={errors.donorPhone ? 'donor-phone-error donor-phone-note' : 'donor-phone-note'}
+              className={`w-full px-3 py-2 text-xs rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700/20 ${
+                errors.donorPhone ? 'border-rose-400' : 'border-stone-300'
+              }`}
+            />
+            {errors.donorPhone && <p id="donor-phone-error" className="text-[11px] text-rose-600">{errors.donorPhone}</p>}
+            <p id="donor-phone-note" className="text-[11px] text-stone-500">
+              Signed-in users can call this number to arrange food collection.
+            </p>
+          </div>
+
           {/* Row 3: Pickup Location & Campus Area */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2 space-y-1">
@@ -339,6 +377,7 @@ export function CreateDonationModal({
               <input
                 type="datetime-local"
                 value={pickupDeadline}
+                min={toLocalDateTime(new Date())}
                 onChange={(e) => setPickupDeadline(e.target.value)}
                 className={`w-full px-3 py-2 text-xs rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700/20 ${
                   errors.pickupDeadline ? 'border-rose-400' : 'border-stone-300'
@@ -378,7 +417,7 @@ export function CreateDonationModal({
               className="px-5 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
-              <span>Publish to Rescue Queue</span>
+              <span>Add Donation</span>
             </button>
           </div>
         </form>

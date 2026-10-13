@@ -14,34 +14,48 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { Donation } from '@/types';
 
 interface ImpactChartsProps {
   donations: Donation[];
+  currentTime: number;
 }
 
-export function ImpactCharts({ donations }: ImpactChartsProps) {
-  // 1. Rescued Food Over Time (Historical + current delivered donations)
-  // Group delivered donations by time or days
+export function ImpactCharts({ donations, currentTime }: ImpactChartsProps) {
   const deliveredDonations = donations.filter((d) => d.status === 'delivered');
+  const indiaDateKey = (date: Date) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  };
+  const todayKey = indiaDateKey(new Date(currentTime));
+  const kgByDate = new Map<string, number>();
+  for (const donation of deliveredDonations) {
+    if (!donation.deliveredAt) continue;
+    const dateKey = indiaDateKey(new Date(donation.deliveredAt));
+    kgByDate.set(dateKey, (kgByDate.get(dateKey) ?? 0) + donation.quantityKg);
+  }
 
-  // Realistic 7-day cumulative timeline data based on delivered items
-  const timeSeriesData = [
-    { day: 'Mon', kgRescued: 28, cumulativeKg: 28, meals: 70 },
-    { day: 'Tue', kgRescued: 34, cumulativeKg: 62, meals: 155 },
-    { day: 'Wed', kgRescued: 22, cumulativeKg: 84, meals: 210 },
-    { day: 'Thu', kgRescued: 40, cumulativeKg: 124, meals: 310 },
-    { day: 'Fri', kgRescued: 56, cumulativeKg: 180, meals: 450 },
-    { day: 'Sat', kgRescued: 38, cumulativeKg: 218, meals: 545 },
-    {
-      day: 'Today (Sun)',
-      kgRescued: deliveredDonations.reduce((acc, d) => acc + d.quantityKg, 0),
-      cumulativeKg: 218 + deliveredDonations.reduce((acc, d) => acc + d.quantityKg, 0),
-      meals: Math.round((218 + deliveredDonations.reduce((acc, d) => acc + d.quantityKg, 0)) * 2.5),
-    },
-  ];
+  const timeSeriesData = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(`${todayKey}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() - 6 + index);
+    const dateKey = date.toISOString().slice(0, 10);
+    return {
+      day: new Intl.DateTimeFormat('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      }).format(date),
+      kgRescued: kgByDate.get(dateKey) ?? 0,
+    };
+  });
+  const weeklyTotalKg = timeSeriesData.reduce((total, day) => total + day.kgRescued, 0);
 
   // 2. Status Distribution Data
   const statusCounts = donations.reduce(
@@ -83,53 +97,59 @@ export function ImpactCharts({ donations }: ImpactChartsProps) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-stone-900 text-sm sm:text-base">
-                Cumulative Food Rescued (kg)
+                Food Rescued by Day (kg)
               </h3>
               <p className="text-xs text-stone-500">
-                Seeded 7-day campus run + real-time delivered missions
+                Actual delivered donations from the last 7 days
               </p>
             </div>
             <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-              Weekly Trend
+              {weeklyTotalKg} kg this week
             </span>
           </div>
 
-          <div className="h-64 sm:h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={timeSeriesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="forestGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#78716c' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#78716c' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    borderColor: '#e7e5e4',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  }}
-                  formatter={(val: number | string | readonly (number | string)[] | undefined) => [
-                    `${val} kg`,
-                    'Cumulative Rescued',
-                  ]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cumulativeKg"
-                  stroke="#1b4332"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#forestGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          {weeklyTotalKg > 0 ? (
+            <div className="h-64 sm:h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeSeriesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="forestGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#78716c' }} />
+                  <YAxis unit=" kg" tick={{ fontSize: 11, fill: '#78716c' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e7e5e4',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
+                    formatter={(val: number | string | readonly (number | string)[] | undefined) => [
+                      `${val} kg`,
+                      'Food rescued',
+                    ]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="kgRescued"
+                    stroke="#1b4332"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#forestGrad)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 sm:h-72 flex items-center justify-center text-sm text-stone-500">
+              No deliveries recorded in the last 7 days.
+            </div>
+          )}
         </div>
 
         {/* Status Distribution Pie */}
@@ -138,7 +158,7 @@ export function ImpactCharts({ donations }: ImpactChartsProps) {
             <h3 className="font-bold text-stone-900 text-sm sm:text-base">
               Donation Lifecycle Status
             </h3>
-            <p className="text-xs text-stone-500">Breakdown of current demo dataset</p>
+            <p className="text-xs text-stone-500">            Current tracked donations</p>
           </div>
 
           <div className="h-52 w-full flex items-center justify-center">
@@ -193,7 +213,7 @@ export function ImpactCharts({ donations }: ImpactChartsProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-bold text-stone-900 text-sm sm:text-base">
-              Food Categories Rescued / Logged (kg)
+              Food Donations by Category (kg)
             </h3>
             <p className="text-xs text-stone-500">
               Distribution across hot cooked meals, bakery, dairy and fresh produce

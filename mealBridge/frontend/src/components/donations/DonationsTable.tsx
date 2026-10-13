@@ -6,21 +6,16 @@ import { Donation } from '@/types';
 import { evaluateUrgency } from '@/lib/urgency';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { UrgencyBadge } from '@/components/ui/UrgencyBadge';
-import { MapPin, Users2, ArrowRight } from 'lucide-react';
+import { formatTime } from '@/lib/format';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
+import { MapPin, Phone } from 'lucide-react';
 
 interface DonationsTableProps {
   donations: Donation[];
 }
 
 export function DonationsTable({ donations }: DonationsTableProps) {
-  const formatTime = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return iso;
-    }
-  };
+  const { currentTime } = useMealBridgeStore();
 
   return (
     <div className="bg-white rounded-xl border border-stone-200/90 overflow-hidden shadow-2xs">
@@ -39,7 +34,7 @@ export function DonationsTable({ donations }: DonationsTableProps) {
           </thead>
           <tbody className="divide-y divide-stone-100">
             {donations.map((donation) => {
-              const urgency = evaluateUrgency(donation);
+              const urgency = evaluateUrgency(donation, currentTime);
               const isClaimable = donation.status === 'available' && !urgency.isExpired;
 
               return (
@@ -96,28 +91,25 @@ export function DonationsTable({ donations }: DonationsTableProps) {
 
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/matching?donationId=${donation.id}`}
-                        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-600 hover:text-emerald-800 transition-colors"
-                        title="Match Recipient"
-                      >
-                        <Users2 className="w-4 h-4" />
-                      </Link>
-
                       {isClaimable ? (
-                        <Link
-                          href={`/pickup?claimId=${donation.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs"
-                        >
-                          <span>Claim</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </Link>
+                        donation.donorPhone ? (
+                          <a
+                            href={`tel:${donation.donorPhone.replace(/[^\d+]/g, '')}`}
+                            aria-label={`Call donor ${donation.donorName}`}
+                            className="inline-flex items-center gap-1 rounded-md bg-emerald-800 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-900"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            <span>Call Donor</span>
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-stone-500 px-2 py-1">Phone unavailable</span>
+                        )
                       ) : donation.status === 'claimed' ? (
                         <Link
                           href={`/pickup`}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
                         >
-                          <span>Verify</span>
+                          <span>Enter Pickup Code</span>
                         </Link>
                       ) : (
                         <span className="text-[11px] text-stone-400 px-2 py-1">

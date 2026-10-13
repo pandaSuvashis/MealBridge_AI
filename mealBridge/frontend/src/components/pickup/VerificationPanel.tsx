@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { Donation } from '@/types';
 import {
   QrCode,
@@ -22,13 +22,13 @@ interface VerificationPanelProps {
 }
 
 export function VerificationPanel({ donation, onSuccess }: VerificationPanelProps) {
-  const { verifyPickupCode, markAsDelivered } = useDemoStore();
+  const { verifyPickupCode, markAsDelivered } = useMealBridgeStore();
   const [codeInput, setCodeInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showDemoPass, setShowDemoPass] = useState(false);
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -38,7 +38,7 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
       return;
     }
 
-    const result = verifyPickupCode(donation.id, codeInput.trim());
+    const result = await verifyPickupCode(donation.id, codeInput.trim());
     if (result.success) {
       setSuccessMsg(
         `Pickup verified! Food transfer confirmed from ${donation.donorName}. Status updated to "Collected".`
@@ -50,10 +50,10 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
     }
   };
 
-  const handleMarkDelivered = () => {
+  const handleMarkDelivered = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
-    const result = markAsDelivered(donation.id);
+    const result = await markAsDelivered(donation.id);
     if (result.success) {
       setSuccessMsg(
         `Mission accomplished! ${donation.quantityKg} kg has been successfully delivered and added to platform impact statistics.`
@@ -165,7 +165,7 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-stone-100 hover:bg-stone-200/80 text-stone-700 border border-stone-200 transition-colors"
             >
               {showDemoPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span>{showDemoPass ? 'Hide Collector Pass' : 'View Collector Pass (Demo Helper)'}</span>
+              <span>{showDemoPass ? 'Hide Pickup Code' : 'Show Pickup Code'}</span>
             </button>
           </div>
 
@@ -194,7 +194,7 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
                   onClick={() => setCodeInput(donation.pickupCode || '')}
                   className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 hover:text-emerald-950 underline"
                 >
-                  Quick Fill
+                  Use This Code
                 </button>
               </div>
             </div>
@@ -217,7 +217,7 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
               className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-2xs transition-colors flex items-center justify-center gap-1.5"
             >
               <PackageCheck className="w-4 h-4" />
-              <span>Verify & Release Food</span>
+              <span>Confirm Pickup</span>
             </button>
           </form>
         </div>
@@ -246,7 +246,7 @@ export function VerificationPanel({ donation, onSuccess }: VerificationPanelProp
               className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Confirm Final Distribution (Mark Delivered)</span>
+              <span>Mark as Delivered</span>
             </button>
           </div>
         </div>

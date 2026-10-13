@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { sortDonationsByUrgency, evaluateUrgency } from '@/lib/urgency';
 import { QueueCard } from '@/components/queue/QueueCard';
 import { CreateDonationModal } from '@/components/donations/CreateDonationModal';
@@ -17,14 +17,14 @@ import {
 } from 'lucide-react';
 
 export default function RescueQueuePage() {
-  const { donations } = useDemoStore();
+  const { donations, currentTime } = useMealBridgeStore();
   const [filterTab, setFilterTab] = useState<'all' | 'urgent' | 'normal' | 'expired'>('all');
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // Sort all donations according to transparent priority rule
   const rankedItems = useMemo(() => {
-    return sortDonationsByUrgency(donations);
-  }, [donations]);
+    return sortDonationsByUrgency(donations, currentTime);
+  }, [donations, currentTime]);
 
   // Tab filtered items
   const filteredRanked = useMemo(() => {
@@ -69,7 +69,7 @@ export default function RescueQueuePage() {
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Batch to Queue</span>
+            <span>Add Food</span>
           </button>
         </div>
 
@@ -99,7 +99,7 @@ export default function RescueQueuePage() {
               : 'bg-white text-stone-600 hover:text-stone-900 border border-stone-200'
           }`}
         >
-          All Queue Items ({rankedItems.length})
+          All food ({rankedItems.length})
         </button>
 
         <button
@@ -111,7 +111,7 @@ export default function RescueQueuePage() {
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Urgent Only ({urgentCount})</span>
+          <span>Urgent ({urgentCount})</span>
         </button>
 
         <button
@@ -123,7 +123,7 @@ export default function RescueQueuePage() {
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
-          <span>Normal Buffer ({normalCount})</span>
+          <span>Not urgent ({normalCount})</span>
         </button>
 
         <button
@@ -135,7 +135,7 @@ export default function RescueQueuePage() {
           }`}
         >
           <Ban className="w-3.5 h-3.5" />
-          <span>Expired / Inactive ({expiredCount})</span>
+          <span>Expired ({expiredCount})</span>
         </button>
       </div>
 

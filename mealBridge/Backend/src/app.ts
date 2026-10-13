@@ -1,0 +1,20 @@
+import express from 'express';
+import cors from 'cors';
+import { env } from './config/env.js';
+import { databaseStatus } from './config/database.js';
+import { donationRouter } from './routes/donation.routes.js';
+import { impactRouter } from './routes/impact.routes.js';
+import { participantRouter } from './routes/participant.routes.js';
+import { requireSupabaseAuth } from './middleware/auth.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+
+export const app = express();
+app.use(cors({ origin: env.frontendUrl.split(',').map((origin) => origin.trim()), methods: ['GET', 'POST', 'PATCH'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+app.use(express.json({ limit: '1mb' }));
+app.get('/api/health', (_req, res) => res.json({ success: true, data: { status: 'ok', database: databaseStatus() } }));
+app.use('/api', requireSupabaseAuth);
+app.use('/api/donations', donationRouter);
+app.use('/api/impact', impactRouter);
+app.use('/api/participants', participantRouter);
+app.use(notFoundHandler);
+app.use(errorHandler);

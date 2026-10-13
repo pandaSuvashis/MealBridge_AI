@@ -3,17 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import {
   LayoutDashboard,
   UtensilsCrossed,
   Hourglass,
-  Users2,
+  PhoneCall,
   QrCode,
   BarChart3,
-  Sliders,
   Leaf,
-  RotateCcw,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,7 +20,7 @@ interface SidebarProps {
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
-  const { urgentDonations, resetDemoData } = useDemoStore();
+  const { urgentDonations } = useMealBridgeStore();
 
   const urgentCount = urgentDonations.length;
 
@@ -34,40 +32,34 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       badge: null,
     },
     {
-      name: 'Food Donations',
+      name: 'Food',
       href: '/donations',
       icon: UtensilsCrossed,
       badge: null,
     },
     {
-      name: 'Rescue Queue',
+      name: 'Urgent Food',
       href: '/queue',
       icon: Hourglass,
       badge: urgentCount > 0 ? `${urgentCount} urgent` : null,
       badgeColor: 'bg-amber-100 text-amber-900 border-amber-200',
     },
     {
-      name: 'Recipient Matching',
+      name: 'Call Donors',
       href: '/matching',
-      icon: Users2,
+      icon: PhoneCall,
       badge: null,
     },
     {
-      name: 'Pickup Verification',
+      name: 'Pickup & Delivery',
       href: '/pickup',
       icon: QrCode,
       badge: null,
     },
     {
-      name: 'Impact Analytics',
+      name: 'Impact',
       href: '/analytics',
       icon: BarChart3,
-      badge: null,
-    },
-    {
-      name: 'Demo Controls',
-      href: '/settings',
-      icon: Sliders,
       badge: null,
     },
   ];
@@ -96,15 +88,6 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <p className="text-[11px] text-stone-500 font-medium">Surplus Food Rescue</p>
           </div>
         </Link>
-      </div>
-
-      {/* Demo Mode Sub-banner */}
-      <div className="mx-4 mt-3 p-2 rounded-lg bg-emerald-50/80 border border-emerald-200/60 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-          <span className="text-[11px] font-semibold text-emerald-900">DEMO MODE</span>
-        </div>
-        <span className="text-[10px] text-emerald-700/80 font-mono">HYD-CAMPUS</span>
       </div>
 
       {/* Navigation Links */}
@@ -150,23 +133,11 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         })}
       </nav>
 
-      {/* Bottom Quick Reset & Context */}
-      <div className="p-4 border-t border-stone-100 bg-stone-50/60 space-y-2">
+      <div className="p-4 border-t border-stone-100 bg-stone-50/60">
         <div className="flex items-center justify-between text-xs text-stone-500">
           <span>College Campus Node</span>
           <span className="font-mono text-[10px]">v0.9-mvp</span>
         </div>
-        <button
-          onClick={() => {
-            if (confirm('Reset all demo records back to initial seeded campus data?')) {
-              resetDemoData();
-            }
-          }}
-          className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium text-stone-600 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 shadow-2xs transition-colors"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-stone-500" />
-          <span>Reset Demo Data</span>
-        </button>
       </div>
     </aside>
   );

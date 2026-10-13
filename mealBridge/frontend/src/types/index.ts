@@ -20,12 +20,14 @@ export interface Donation {
   category: FoodCategory;
   quantityKg: number;
   donorName: string;
+  donorPhone?: string;
   donorType: 'Campus Mess' | 'Cafeteria' | 'Bakery' | 'Tech Park Dining' | 'Event Hall';
   pickupLocation: string;
   locationArea: string; // e.g. "Gachibowli", "IIIT Campus", "DLF"
   preparationTime: string; // ISO string
   pickupDeadline: string; // ISO string
   foodNotes: string;
+  analyticsIncluded: boolean;
   status: DonationStatus;
   pickupCode?: string; // 6-digit verification code generated when claimed
   claimedBy?: {

@@ -6,15 +6,15 @@ import { Donation } from '@/types';
 import { evaluateUrgency } from '@/lib/urgency';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { UrgencyBadge } from '@/components/ui/UrgencyBadge';
+import { formatTime } from '@/lib/format';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import {
   MapPin,
   Building,
-  Clock,
-  AlertTriangle,
-  ArrowRight,
-  Users2,
+  Phone,
   Info,
   CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 
 interface QueueCardProps {
@@ -23,16 +23,8 @@ interface QueueCardProps {
 }
 
 export function QueueCard({ donation, rank }: QueueCardProps) {
-  const urgency = evaluateUrgency(donation);
-
-  const formatTime = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return iso;
-    }
-  };
+  const { currentTime } = useMealBridgeStore();
+  const urgency = evaluateUrgency(donation, currentTime);
 
   const isExpired = urgency.isExpired || donation.status === 'expired';
   const isAvailable = donation.status === 'available' && !isExpired;
@@ -125,22 +117,20 @@ export function QueueCard({ donation, rank }: QueueCardProps) {
         {/* Right Side: Actions */}
         <div className="flex items-center gap-2 lg:flex-col lg:items-end lg:justify-center shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-stone-100">
           {isAvailable ? (
-            <>
-              <Link
-                href={`/pickup?claimId=${donation.id}`}
+            donation.donorPhone ? (
+              <a
+                href={`tel:${donation.donorPhone.replace(/[^\d+]/g, '')}`}
+                aria-label={`Call donor ${donation.donorName}`}
                 className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs w-full lg:w-36 text-center"
               >
-                <span>Claim Pickup</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                href={`/matching?donationId=${donation.id}`}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/80 transition-colors w-full lg:w-36 text-center"
-              >
-                <Users2 className="w-3.5 h-3.5" />
-                <span>Match NGO</span>
-              </Link>
-            </>
+                <Phone className="h-3.5 w-3.5" />
+                <span>Call Donor</span>
+              </a>
+            ) : (
+              <div className="px-3 py-2 rounded-lg bg-stone-100 text-stone-500 text-xs font-medium text-center w-full lg:w-36">
+                Phone unavailable
+              </div>
+            )
           ) : isExpired ? (
             <div className="px-3 py-2 rounded-lg bg-stone-100 text-stone-500 text-xs font-medium text-center w-full lg:w-36">
               Non-Claimable (Expired)
@@ -150,7 +140,7 @@ export function QueueCard({ donation, rank }: QueueCardProps) {
               href="/pickup"
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors w-full lg:w-36 text-center"
             >
-              <span>Awaiting Code</span>
+              <span>Enter Pickup Code</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : (

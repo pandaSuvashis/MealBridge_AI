@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useDemoStore } from '@/lib/demo-store';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import { VerificationPanel } from '@/components/pickup/VerificationPanel';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { UrgencyBadge } from '@/components/ui/UrgencyBadge';
@@ -11,19 +11,15 @@ import {
   QrCode,
   Truck,
   CheckCircle2,
-  Clock,
-  ArrowRight,
-  ShieldCheck,
+  Phone,
   Building,
-  KeyRound,
-  AlertCircle,
 } from 'lucide-react';
 
 function PickupVerificationContent() {
   const searchParams = useSearchParams();
   const claimIdFromUrl = searchParams.get('claimId');
 
-  const { donations, recipients, claimDonation } = useDemoStore();
+  const { donations, currentTime } = useMealBridgeStore();
 
   // Active pickups (claimed or collected)
   const activePickups = useMemo(() => {
@@ -33,9 +29,9 @@ function PickupVerificationContent() {
   // Claimable donations
   const claimableDonations = useMemo(() => {
     return donations.filter(
-      (d) => d.status === 'available' && !evaluateUrgency(d).isExpired
+      (d) => d.status === 'available' && !evaluateUrgency(d, currentTime).isExpired
     );
-  }, [donations]);
+  }, [donations, currentTime]);
 
   // Selected item to verify
   const [selectedPickupId, setSelectedPickupId] = useState<string>(() => {
@@ -52,16 +48,6 @@ function PickupVerificationContent() {
       claimableDonations[0]
     );
   }, [donations, selectedPickupId, activePickups, claimableDonations]);
-
-  // Quick claim handler
-  const handleQuickClaim = (donationId: string) => {
-    const res = claimDonation(donationId);
-    if (res.success) {
-      setSelectedPickupId(donationId);
-    } else {
-      alert(res.error || 'Claim failed');
-    }
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -110,30 +96,33 @@ function PickupVerificationContent() {
 
                 <div className="flex items-center gap-2">
                   <StatusBadge status={selectedDonation.status} size="sm" />
-                  <UrgencyBadge evaluation={evaluateUrgency(selectedDonation)} showRemainingText={false} />
+                  <UrgencyBadge evaluation={evaluateUrgency(selectedDonation, currentTime)} showRemainingText={false} />
                 </div>
               </div>
 
-              {/* If available, show Claim Action first */}
+              {/* Available donations require direct donor contact before the handover workflow. */}
               {selectedDonation.status === 'available' ? (
                 <div className="bg-white rounded-xl border border-stone-200/90 p-6 shadow-2xs text-center space-y-4">
-                  <KeyRound className="w-10 h-10 text-emerald-800 mx-auto" />
+                  <Phone className="w-10 h-10 text-emerald-800 mx-auto" />
                   <div>
                     <h3 className="font-bold text-base text-stone-900">
-                      Ready to Claim for Pickup
+                      Contact the Donor
                     </h3>
                     <p className="text-xs text-stone-500 max-w-md mx-auto mt-1">
-                      Claiming this donation assigns your volunteer team or NGO and generates a unique,
-                      time-stamped verification code for the donor&apos;s kitchen dock.
+                      Call to confirm the food is still available and agree on the collection time and location. This does not reserve the donation.
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleQuickClaim(selectedDonation.id)}
-                    className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 shadow-2xs transition-colors inline-flex items-center gap-2"
-                  >
-                    <span>Claim Donation &amp; Generate Code</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {selectedDonation.donorPhone ? (
+                    <a
+                      href={`tel:${selectedDonation.donorPhone.replace(/[^\d+]/g, '')}`}
+                      className="mx-auto inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-5 py-2.5 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-900"
+                    >
+                      <Phone className="h-4 w-4" />
+                      <span>Call {selectedDonation.donorName}</span>
+                    </a>
+                  ) : (
+                    <p className="text-xs font-medium text-stone-500">Donor phone number is not available for this older listing.</p>
+                  )}
                 </div>
               ) : (
                 /* Verification Lifecycle Panel */
@@ -199,10 +188,10 @@ function PickupVerificationContent() {
             </div>
           </div>
 
-          {/* Claimable Donations Queue */}
+          {/* Available donations for direct donor contact */}
           <div className="bg-white rounded-xl border border-stone-200/90 p-5 shadow-2xs space-y-3">
             <h3 className="font-bold text-stone-900 text-sm">
-              Claimable Surplus ({claimableDonations.length})
+              Call a Donor ({claimableDonations.length})
             </h3>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -217,12 +206,18 @@ function PickupVerificationContent() {
                       {d.quantityKg} kg · {d.donorName}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleQuickClaim(d.id)}
-                    className="shrink-0 px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors"
-                  >
-                    Claim
-                  </button>
+                  {d.donorPhone ? (
+                    <a
+                      href={`tel:${d.donorPhone.replace(/[^\d+]/g, '')}`}
+                      aria-label={`Call donor ${d.donorName}`}
+                      className="shrink-0 inline-flex items-center gap-1 rounded bg-emerald-800 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-900"
+                    >
+                      <Phone className="h-3 w-3" />
+                      Call
+                    </a>
+                  ) : (
+                    <span className="shrink-0 text-[10px] text-stone-500">No phone</span>
+                  )}
                 </div>
               ))}
             </div>

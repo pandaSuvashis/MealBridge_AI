@@ -3,14 +3,17 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
-import { RoleSelectorModal } from '@/components/ui/RoleSelectorModal';
-import { Menu, Sparkles } from 'lucide-react';
+import { LogOut, Menu, Moon, Sparkles, Sun } from 'lucide-react';
 
 interface TopNavProps {
   onOpenMobile: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+  authEmail: string | null;
+  onSignOut: () => void;
 }
 
-export function TopNav({ onOpenMobile }: TopNavProps) {
+export function TopNav({ onOpenMobile, isDarkMode, onToggleTheme, authEmail, onSignOut }: TopNavProps) {
   const pathname = usePathname();
 
   // Page titles and context descriptions
@@ -28,7 +31,7 @@ export function TopNav({ onOpenMobile }: TopNavProps) {
         };
       case '/donations/create':
         return {
-          title: 'Create Surplus Donation',
+          title: 'Add Food',
           subtitle: 'Register freshly prepared or untouched surplus food batch',
         };
       case '/queue':
@@ -38,8 +41,8 @@ export function TopNav({ onOpenMobile }: TopNavProps) {
         };
       case '/matching':
         return {
-          title: 'Transparent Recipient Matching',
-          subtitle: 'Explainable capacity, proximity, and transit feasibility scoring',
+          title: 'Call Donors',
+          subtitle: 'Contact food donors directly to arrange collection',
         };
       case '/pickup':
         return {
@@ -50,11 +53,6 @@ export function TopNav({ onOpenMobile }: TopNavProps) {
         return {
           title: 'Impact & Sustainability Analytics',
           subtitle: 'Verified rescued kilograms, CO2e prevented, and meal equivalents',
-        };
-      case '/settings':
-        return {
-          title: 'Demo Environment Controls',
-          subtitle: 'Manage local simulation parameters, test state, and persona views',
         };
       default:
         return {
@@ -72,7 +70,7 @@ export function TopNav({ onOpenMobile }: TopNavProps) {
         <button
           onClick={onOpenMobile}
           className="p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 lg:hidden focus:outline-none"
-          aria-label="Toggle mobile menu"
+          aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -94,13 +92,48 @@ export function TopNav({ onOpenMobile }: TopNavProps) {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isDarkMode}
+          aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          onClick={onToggleTheme}
+          className="theme-toggle group relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-800 transition-all duration-300 hover:scale-105 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          <span className="relative grid h-5 w-5 place-items-center" aria-hidden="true">
+            <Sun
+              size={19}
+              strokeWidth={1.8}
+              className={`absolute transition-all duration-300 motion-reduce:transition-none ${
+                isDarkMode ? 'rotate-0 scale-100 opacity-100' : 'rotate-90 scale-0 opacity-0'
+              }`}
+            />
+            <Moon
+              size={19}
+              strokeWidth={1.8}
+              className={`absolute transition-all duration-300 motion-reduce:transition-none ${
+                isDarkMode ? '-rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'
+              }`}
+            />
+          </span>
+        </button>
+        <div className="hidden max-w-44 truncate text-xs text-stone-500 xl:block" title={authEmail ?? undefined}>
+          {authEmail}
+        </div>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 sm:px-3"
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden text-xs font-semibold sm:inline">Sign out</span>
+        </button>
         {/* Interactive Notifications */}
         <NotificationDropdown />
 
-        <div className="h-5 w-px bg-stone-200" />
-
-        {/* Demo Role / Persona Switcher */}
-        <RoleSelectorModal />
       </div>
     </header>
   );

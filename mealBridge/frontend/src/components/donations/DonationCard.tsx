@@ -6,14 +6,15 @@ import { Donation } from '@/types';
 import { evaluateUrgency } from '@/lib/urgency';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { UrgencyBadge } from '@/components/ui/UrgencyBadge';
+import { formatTime } from '@/lib/format';
+import { useMealBridgeStore } from '@/lib/mealbridge-store';
 import {
   MapPin,
   Building,
-  Scale,
   Calendar,
   Clock,
   ArrowRight,
-  Users2,
+  Phone,
   FileText,
 } from 'lucide-react';
 
@@ -23,17 +24,8 @@ interface DonationCardProps {
 }
 
 export function DonationCard({ donation }: DonationCardProps) {
-  const urgency = evaluateUrgency(donation);
-
-  // Format dates nicely
-  const formatTime = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return iso;
-    }
-  };
+  const { currentTime } = useMealBridgeStore();
+  const urgency = evaluateUrgency(donation, currentTime);
 
   const isClaimable = donation.status === 'available' && !urgency.isExpired;
 
@@ -122,28 +114,25 @@ export function DonationCard({ donation }: DonationCardProps) {
 
       {/* Action Footer */}
       <div className="mt-4 pt-3 flex items-center justify-between gap-2 border-t border-stone-100">
-        <Link
-          href={`/matching?donationId=${donation.id}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors"
-        >
-          <Users2 className="w-3.5 h-3.5" />
-          <span>Match NGO</span>
-        </Link>
-
         {isClaimable ? (
-          <Link
-            href={`/pickup?claimId=${donation.id}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs"
-          >
-            <span>Claim & Pickup</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
+          donation.donorPhone ? (
+            <a
+              href={`tel:${donation.donorPhone.replace(/[^\d+]/g, '')}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-800 text-white hover:bg-emerald-900 transition-colors shadow-2xs"
+              aria-label={`Call donor ${donation.donorName}`}
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span>Call Donor</span>
+            </a>
+          ) : (
+            <span className="text-[11px] text-stone-500 font-medium">Donor phone unavailable</span>
+          )
         ) : donation.status === 'claimed' ? (
           <Link
             href={`/pickup`}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
           >
-            <span>Verify Code</span>
+            <span>Enter Pickup Code</span>
             <ArrowRight className="w-3 h-3" />
           </Link>
         ) : (
